@@ -1,0 +1,40 @@
+{
+  "name": "assistant",
+  "version": "1.0.0",
+  "description": "bussines assitant",
+  "main": "index.js",
+  "scripts": {
+    "run": "node app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/surru2/assistant.git"
+  },
+  "keywords": [
+    "bot",
+    "telegram",
+    "bussines",
+    "assistant"
+  ],
+  "author": "XYZ",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/surru2/assistant/issues"
+  },
+  "homepage": "https://github.com/surru2/assistant#readme",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "fluent-ffmpeg": "^2.1.2",
+    "https-proxy-agent": "^3.0.1",
+    "moment": "^2.24.0",
+    "mongodb": "^3.3.4",
+    "request": "^2.88.0",
+    "request-promise": "^4.2.5",
+    "telegraf": "^3.33.3",
+    "telegraf-inline-menu": "^4.0.0",
+    "temp": "^0.9.1",
+    "witai-speech": "^0.2.0"
+  }
+}
