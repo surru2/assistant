@@ -1,6 +1,5 @@
 require('dotenv').config()
 const Telegraf = require('telegraf')
-const session = require('telegraf/session')
 const MongoClient = require('mongodb');
 const { BOT_TOKEN } = process.env
 
@@ -23,11 +22,13 @@ const bodyParser = require('body-parser');
 const app = express();
 const app_port = 80;
 
-bot.use(session())
-
-app.use(express.static('public'));
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.engine('html', require('ejs').renderFile);
+app.use(express.static('views'));
+
 
 app.listen(app_port, '0.0.0.0', function () {
     console.log("Web server started on port " + app_port);
@@ -45,6 +46,7 @@ console.log(cfg.params.mongoURL)
 const startApp = async () => {
     const client = await MongoClient.connect(cfg.params.mongoURL, cfg.params.mongoOpts)
     const db = client.db('assistant')
+    app.locals.db = db;
     console.log(BOT_TOKEN)
     console.log(db.s.namespace)
 
@@ -133,9 +135,7 @@ const startApp = async () => {
                 case 'Мои сотрудники':
                     user.state = null
                     await db.collection('users').updateOne({ id: user.id }, { $set: { state: user.state } })
-                    const users = await db.collection('users').find({ 
-                        owner: user.id  
-                     }).toArray()
+                    const users = await db.collection('users').find({owner: user.id}).toArray()
                     if(!users.length){
                         ctx.reply('У вас не найдено ни одного сотрудника')
                         return
@@ -251,6 +251,36 @@ function mainKeyboard(msg,ctx){
 
 startApp()
 
+app.get('/*',function(req,res){
+	res.render('index.html');
+});
+
+app.post('/', async (req,res) => {
+    console.log(req.body.id)
+    const db = req.app.locals.db;
+    if(req.body.act==='getTasks'){
+        const tasks = await db.collection('tasks').find({ownerId: +req.body.id}).toArray()
+        console.log(tasks)
+        res.end(JSON.stringify(tasks))
+    }else if(req.body.act==='getUsers'){
+        const tasks = await db.collection('users').find({owner: +req.body.id}).toArray()
+        console.log(tasks)
+        res.end(JSON.stringify(tasks))
+    }else if(req.body.act==='setTask'){
+        const updTask = await db.collection('tasks').updateOne({_id: ObjectId(req.body.id)},{
+            $set:{
+                startAlarm: req.body.startAlarm,
+                stopAlarm: req.body.stopAlarm,
+                worker: req.body.worker,
+                importance: req.body.importance,
+            }
+        })
+        if(updTask.result.ok){
+            telegram.sendMessage(req.body.worker, 'Вам назначена новая задача')
+        }
+        res.end(JSON.stringify({status:true}))
+    }     
+})
 
 
 //telegram.sendMessage(385527955, 'asdasdasd')

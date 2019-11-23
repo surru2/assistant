@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Assitant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
+    <link rel='stylesheet prefetch' href='https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css'>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.1/moment.js"></script>
+</head>
+
+<body>
+    <!-- Dropdown Structure -->
+    <ul id="dropdown1" class="dropdown-content">
+        <li><a href="#!">Задачи</a></li>
+        <li><a href="#!">Настройки</a></li>
+        <li class="divider"></li>
+    </ul>
+    <nav>
+        <div class="nav-wrapper">
+            <ul class="left">
+                <li><a class="dropdown-trigger" href="#!" data-target="dropdown1"><i class="fa fa-bars"></i></a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="tinder">
+        <div class="tinder--status">
+            <i class="fa fa-check-circle"></i>
+            <i class="fa fa-times-circle"></i>
+        </div>
+
+        <div class="tinder--cards" id="cards">
+            
+        </div>
+
+        <div class="tinder--buttons">
+            <button id="nope"><i class="fa fa-check-circle"></i></button>
+            <button id="love"><i class="fa fa-times-circle"></i></button>
+        </div>
+    </div>
+    <script src='https://hammerjs.github.io/dist/hammer.min.js'></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
