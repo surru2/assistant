@@ -4,7 +4,8 @@
   "description": "bussines assitant",
   "main": "index.js",
   "scripts": {
-    "run": "node app.js"
+    "run": "node app.js",
+    "build": "node app.js"
   },
   "repository": {
     "type": "git",
