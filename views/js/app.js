@@ -27,7 +27,7 @@ function setCards(tasks, workers){
   tasks.forEach(task=>{
     card+=`
     <div class="tinder--card" id="${task._id}">
-        <h5 class="nodrag" style="text-align:left;padding:10px;">${task.text}</h1>
+        <h6 class="nodrag" style="text-align:left;padding:10px;">${task.text}</h1>
         <input type="text" class="datepicker control" placeholder="Старт" style="width:20%;">
         <input type="text" class="timepicker control" placeholder="Время" style="width:20%;">
         <input type="text" class="datepicker control" placeholder="Стоп" style="width:20%;">

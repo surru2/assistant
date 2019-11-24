@@ -34,12 +34,12 @@ app.listen(app_port, '0.0.0.0', function () {
     console.log("Web server started on port " + app_port);
 });
 
-bot.launch({
+bot.launch(/*{
   webhook: {
     domain: 'https://419a155d.ngrok.io',
     port: 3000
   }
-})
+}*/)
 
 console.log(cfg.params.mongoURL)
 
@@ -62,7 +62,6 @@ const startApp = async () => {
             ctx.from.importance = null
             user = await db.collection('users').insertOne(ctx.from)
         }
-        ctx.session.user = ctx.from
         return ctx.reply('Добро пожаловать, для дальнейшей работы укажите свой номер телефона', Markup
           .keyboard([
             ['Указать номер телефона'],
@@ -127,13 +126,17 @@ const startApp = async () => {
 `Текст задачи:
 <pre>${item.text}</pre>
 Дата регистрации: ${moment(item.dateStart).format('DD.MM.YYYY hh:MM')}
-Дата исполнения: ${item.dueDate ? item.dueDate : 'не определена'}
+Дата исполнения: ${item.dateStop ? item.start : 'не определена'}
 Статус: ${item.status ? item.status : 'не определён'}
 Исполнитель: ${worker[0] ? worker[0].first_name : ''} ${worker[0] ? worker[0].last_name : ''} ${worker[0] ? worker[0].phone : ''}`,
                                 keyboard
                             )
                         }
                         ctx.reply(`Всего задач ${tasks.length}`)
+                        const keyboard = Markup.inlineKeyboard([
+                            Markup.urlButton('Ссылка', `https://861757d3.ngrok.io/${ctx.from.id}`)
+                          ])
+                        ctx.telegram.sendMessage(ctx.message.from.id, 'Перейти в приложение', Extra.markup(keyboard))
                         return
                     } 
                     break   
@@ -152,6 +155,7 @@ const startApp = async () => {
                                 Markup.inlineKeyboard([
                                 Markup.callbackButton('Удалить', `delete,users,${user.id}`),
                                 ]).extra()
+                
                             )
                         }
                         ctx.reply(`Всего сотрудников ${users.length}`)
@@ -195,9 +199,9 @@ const startApp = async () => {
                         return
                     }
                     let owner = user.owner
-                    owner.push(userToAdd[0].id)
+                    owner.push(ctx.from.id)
                     user.state = null
-                    await db.collection('users').updateOne({ id: user.id }, { 
+                    await db.collection('users').updateOne({ id: userToAdd[0].id }, { 
                         $set: {
                             owner: owner,
                             state: user.state 
@@ -270,10 +274,15 @@ const startApp = async () => {
 }
 
 function mainKeyboard(msg,ctx){
-    return ctx.reply(msg, Markup
+    const keyboard = Markup.inlineKeyboard([
+        Markup.urlButton('Ссылка', `https://861757d3.ngrok.io/${ctx.from.id}`)
+      ])
+    ctx.telegram.sendMessage(ctx.message.from.id, 'Перейти в приложение', Extra.markup(keyboard))
+    return ctx.reply(msg, 
+        Markup
         .keyboard([
-        ['Мои сотрудники','Добавить сотрудника'],
-        ['Мои задачи','Добавить задачу'],
+            ['Мои сотрудники','Добавить сотрудника'],
+            ['Мои задачи','Добавить задачу']
         ])
         .oneTime()
         .resize()
@@ -283,14 +292,18 @@ function mainKeyboard(msg,ctx){
 
 startApp()
 
-app.get('/*',function(req,res){
-	res.render('index.html');
+app.get('/:id',function(req,res){
+    res.render('index.html');
+    if(req.params.id==='send'){
+        console.log('sended')
+        telegram.sendMessage(289034229, 'Истекает срок по задаче "хочу сделать селфи на сцене", поторопитесь!')
+    }
 });
 
 app.post('/', async (req,res) => {
     const db = req.app.locals.db;
     if(req.body.act==='getTasks'){
-        const tasks = await db.collection('tasks').find({ownerId: +req.body.id}).toArray()
+        const tasks = await db.collection('tasks').find({ownerId: +req.body.id, status:null}).toArray()
         console.log(tasks)
         res.end(JSON.stringify(tasks))
     }else if(req.body.act==='getUsers'){
@@ -298,7 +311,6 @@ app.post('/', async (req,res) => {
         console.log(tasks)
         res.end(JSON.stringify(tasks))
     }else if(req.body.act==='setTask'){
-
         const updTask = await db.collection('tasks').updateOne({_id: ObjectId(req.body.id)},{
             $set:{
                 startAlarm: moment(req.body.startAlarm+' '+req.body.startAlarmTime,'DD.MM.YYYY HH:mm').utcOffset('+0500')._d,
