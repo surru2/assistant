@@ -99,7 +99,7 @@ const startApp = async () => {
                 case 'Добавить задачу':
                     user.state = 'addTask'
                     await db.collection('users').updateOne({id:user.id},{$set:{state:user.state}})
-                    ctx.reply('Напишите или проговорите задачу голосом')
+                    ctx.reply('Введите задачу')
                     return
                     break
                 case 'Мои задачи':
@@ -112,20 +112,25 @@ const startApp = async () => {
                     }else{
                         for(item of tasks){
                             const worker = await db.collection('users').find({id: item.workerId}).toArray()
+                            let keyboard
+                            if(item.ownerId == user.id){
+                                keyboard = Markup.inlineKeyboard([
+                                    Markup.callbackButton('Удалить', `delete,users,${item._id}`),
+                                ]).extra()
+                            }else{
+                                keyboard = Markup.inlineKeyboard([
+                                    Markup.callbackButton('Завершить', `accept,mytasks,${item._id}`),
+                                    Markup.callbackButton('Отклонить', `decline,mytasks,${item._id}`),
+                                ]).extra()                               
+                            }
                             await ctx.replyWithHTML(
 `Текст задачи:
 <pre>${item.text}</pre>
 Дата регистрации: ${moment(item.dateStart).format('DD.MM.YYYY hh:MM')}
 Дата исполнения: ${item.dueDate ? item.dueDate : 'не определена'}
 Статус: ${item.status ? item.status : 'не определён'}
-Исполнитель: ${worker[0] ? worker[0].first_name : ''} ${worker[0] ? worker[0].last_name : ''} ${worker[0] ? worker[0].phone : ''}`                               ,
-                                Markup.inlineKeyboard([
-                                    Markup.callbackButton('Удалить', JSON.stringify({
-                                        act: "delete",
-                                        type: "tasks",
-                                        id: item._id
-                                    })),
-                                    ]).extra()
+Исполнитель: ${worker[0] ? worker[0].first_name : ''} ${worker[0] ? worker[0].last_name : ''} ${worker[0] ? worker[0].phone : ''}`,
+                                keyboard
                             )
                         }
                         ctx.reply(`Всего задач ${tasks.length}`)
@@ -145,11 +150,7 @@ const startApp = async () => {
 `${item.first_name} ${item.last_name}
  ${item.phone}`,
                                 Markup.inlineKeyboard([
-                                Markup.callbackButton('Удалить', JSON.stringify({
-                                    act: "delete",
-                                    type: "users",
-                                    id: user.id
-                                })),
+                                Markup.callbackButton('Удалить', `delete,users,${user.id}`),
                                 ]).extra()
                             )
                         }
@@ -164,7 +165,6 @@ const startApp = async () => {
                     return
                     break                                                      
                 default:
-                    console.log()
                     break
             }
 
@@ -183,6 +183,7 @@ const startApp = async () => {
                     user.state = null
                     await db.collection('users').updateOne({id:user.id},{$set:{state:user.state}})
                     mainKeyboard('Задача успешно добавлена',ctx)
+                    break
                 case 'addWorker':
                     if(!ctx.message.text.match(/\(?([0-9]{3})\)?([ .-]?)([0-9]{3})\2([0-9]{4})/)){
                         ctx.reply('Неверный формат ввода телефона')
@@ -202,34 +203,65 @@ const startApp = async () => {
                             state: user.state 
                         } 
                     })
-                    mainKeyboard('Сотрудник успешно добавлен', ctx)                   
+                    mainKeyboard('Сотрудник успешно добавлен', ctx)    
+                    break               
                 default:
-                    mainKeyboard('Выберите необходимое действие',ctx)                            
+                    mainKeyboard('Выберите необходимое действие',ctx)    
+                    break                        
             }
         }
     })
     
-    bot.on('callback_query', (ctx) => {
-        data = JSON.parse(ctx.callbackQuery.data)
-        switch(data.act) {
+    bot.on('callback_query', async (ctx) => {
+        console.log(ctx.callbackQuery.data)
+        data = ctx.callbackQuery.data.split(',')
+        switch(data[0]) {
             case 'delete':
                 telegram.deleteMessage(ctx.callbackQuery.message.chat.id, ctx.callbackQuery.message.message_id)
                 break
         }
-        switch(data.type) {
+        switch(data[1]) {
             case 'users':
-                db.collection('users').updateOne({owner: data.id},{
-                    $pull: {owner: data.id}
+                await db.collection('users').updateOne({owner: data[2]},{
+                    $pull: {owner: data[2]}
                 })     
                 break
             case 'tasks':
-                db.collection('tasks').remove({_id: ObjectId(data.id)})
+                await db.collection('tasks').remove({_id: ObjectId(data[2])})
                 break               
         }
-        
+        if(data[0]==='accept' && data[1]==='newTasks'){
+            const updTask = await db.collection('tasks').updateOne({_id: ObjectId(data[2])},{
+                $set:{
+                    status: 'В работе',
+                }
+            })
+            if(updTask.result.ok){
+                const task = await db.collection('tasks').find({_id: ObjectId(data[2])}).toArray()
+                console.log(task)
+                const worker = await  db.collection('users').find({id: task[0].ownerId}).toArray()
+                telegram.deleteMessage(ctx.callbackQuery.message.chat.id, ctx.callbackQuery.message.message_id)
+                telegram.sendMessage(worker[0].id, `Ваша задача была принята в работу пользователем ${worker[0].first_name} ${worker[0].last_name}`)
+            }            
+        }
+        if(data[0]==='decline' && data[1]==='newTasks'){
+            const updTask = await db.collection('tasks').updateOne({_id: ObjectId(data[2])},{
+                $set:{
+                    workerId: null,
+                    status: null,
+                }
+            })
+            if(updTask.result.ok){
+                const task = await db.collection('tasks').find({_id: ObjectId(data[2])}).toArray()
+                console.log(task)
+                const worker = await  db.collection('users').find({id: task[0].ownerId}).toArray()
+                telegram.deleteMessage(ctx.callbackQuery.message.chat.id, ctx.callbackQuery.message.message_id)
+                telegram.sendMessage(worker[0].id, `Ваша задача была отклонена пользователем ${worker[0].first_name} ${worker[0].last_name}`)
+            }            
+        }        
         console.log(ctx.callbackQuery)
         // Explicit usage
-        //ctx.telegram.answerCbQuery(ctx.callbackQuery.id)
+        ctx.telegram.answerCbQuery(ctx.callbackQuery.id)
       
         // Using context shortcut
         //ctx.answerCbQuery()
@@ -256,7 +288,6 @@ app.get('/*',function(req,res){
 });
 
 app.post('/', async (req,res) => {
-    console.log(req.body.id)
     const db = req.app.locals.db;
     if(req.body.act==='getTasks'){
         const tasks = await db.collection('tasks').find({ownerId: +req.body.id}).toArray()
@@ -267,16 +298,28 @@ app.post('/', async (req,res) => {
         console.log(tasks)
         res.end(JSON.stringify(tasks))
     }else if(req.body.act==='setTask'){
+
         const updTask = await db.collection('tasks').updateOne({_id: ObjectId(req.body.id)},{
             $set:{
-                startAlarm: req.body.startAlarm,
-                stopAlarm: req.body.stopAlarm,
+                startAlarm: moment(req.body.startAlarm+' '+req.body.startAlarmTime,'DD.MM.YYYY HH:mm').utcOffset('+0500')._d,
+                stopAlarm: moment(req.body.stopAlarm+' '+req.body.stopAlarmTime,'DD.MM.YYYY HH:mm').utcOffset('+0500')._d,
                 worker: req.body.worker,
                 importance: req.body.importance,
             }
         })
         if(updTask.result.ok){
-            telegram.sendMessage(req.body.worker, 'Вам назначена новая задача')
+            let task = await db.collection('tasks').find({_id: ObjectId(req.body.id)}).toArray()
+            owner = await db.collection('users').find({id: task[0].ownerId}).toArray()
+            const inlineMessageRatingKeyboard = Markup.inlineKeyboard([
+                Markup.callbackButton('Принять', `accept,newTasks,${req.body.id}`),
+                Markup.callbackButton('Отклонить', `decline,newTasks,${req.body.id}`),
+            ]).extra()
+            telegram.sendMessage(req.body.worker, 
+`${owner[0].first_name} ${owner[0].last_name} назначил вам новую задачу:
+${task[0].text}
+Исполнить до: ${moment(task[0].stopAlarm).format('DD.MM.YYYY HH:mm')}
+`                
+            ,inlineMessageRatingKeyboard)
         }
         res.end(JSON.stringify({status:true}))
     }     

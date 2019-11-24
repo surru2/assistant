@@ -8,8 +8,17 @@ $( document ).ready(async function(){
     tasks = await tasks.json()
     setCards(tasks, workers)
     $(".dropdown-trigger").dropdown();
-    $('.datepicker').datepicker({format: 'dd.mm.yyyy'});
+    $('.datepicker').datepicker({
+      default: 'now',
+      twelvehour: false,
+      autoclose: true,
+      vibrate: true,
+      format: 'dd.mm.yyyy'
+    });
     $('select').formSelect();
+    $('.timepicker').timepicker({
+      twelveHour: false
+    });
 })
 
 
@@ -19,8 +28,10 @@ function setCards(tasks, workers){
     card+=`
     <div class="tinder--card" id="${task._id}">
         <h5 class="nodrag" style="text-align:left;padding:10px;">${task.text}</h1>
-        <input type="text" class="datepicker control" placeholder="Старт" style="width:47%;">
-        <input type="text" class="datepicker control" placeholder="Стоп" style="width:47%;">
+        <input type="text" class="datepicker control" placeholder="Старт" style="width:20%;">
+        <input type="text" class="timepicker control" placeholder="Время" style="width:20%;">
+        <input type="text" class="datepicker control" placeholder="Стоп" style="width:20%;">
+        <input type="text" class="timepicker control" placeholder="Время" style="width:20%;">
         <div class="input-field" style="padding:10px;">
             <select class="control">
                 <option value="" disabled selected>Выберите исполнителя</option>
@@ -120,9 +131,11 @@ function setCards(tasks, workers){
     const id = elem.id
     const controls = elem.querySelectorAll('.control')
     const startAlarm = $(controls[0]).val() ? $(controls[0]).val() : moment().format('DD.MM.YYYY')
-    const stopAlarm = $(controls[1]).val() ? $(controls[1]).val() : moment().format('DD.MM.YYYY')
-    const worker = $(controls[2]).children("option:selected").val() ? $(controls[2]).children("option:selected").val() : window.location.pathname.replace('/','')
-    const importance = $(controls[3]).children("option:selected").val() ? $(controls[3]).children("option:selected").val() : 1
+    const startAlarmTime = $(controls[1]).val() ? $(controls[1]).val() : moment().format('HH:mm')
+    const stopAlarm = $(controls[2]).val() ? $(controls[2]).val() : moment().format('DD.MM.YYYY')
+    const stopAlarmTime = $(controls[3]).val() ? $(controls[3]).val() : moment().format('HH:mm')
+    const worker = $(controls[4]).children("option:selected").val() ? $(controls[4]).children("option:selected").val() : window.location.pathname.replace('/','')
+    const importance = $(controls[5]).children("option:selected").val() ? $(controls[5]).children("option:selected").val() : 1
     console.log(startAlarm,stopAlarm,worker,importance)
     fetch('/', { 
       method: 'post', 
@@ -132,6 +145,8 @@ function setCards(tasks, workers){
         id,
         startAlarm,
         stopAlarm,
+        startAlarmTime,
+        stopAlarmTime,
         worker,
         importance
       }) })
